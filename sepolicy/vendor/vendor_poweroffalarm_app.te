@@ -1,2 +1,0 @@
-allow vendor_poweroffalarm_app cgroup:file write;
-allow vendor_poweroffalarm_app cgroup:file open;

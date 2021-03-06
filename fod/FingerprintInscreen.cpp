@@ -21,6 +21,7 @@
 #include <hidl/HidlTransportSupport.h>
 #include <fstream>
 
+#define FINGERPRINT_ERROR_CANCELED 5
 #define FINGERPRINT_ACQUIRED_VENDOR 6
 #define FINGERPRINT_ERROR_VENDOR 8
 
@@ -33,6 +34,8 @@
 #define OP_DISPLAY_NOTIFY_PRESS 9
 #define OP_DISPLAY_SET_DIM 10
 
+#define DC_DIMMING_PATH "/sys/devices/platform/soc/ae00000.qcom,mdss_mdp/drm/card0/card0-DSI-1/dimlayer_bl_en"
+
 namespace vendor {
 namespace lineage {
 namespace biometrics {
@@ -40,6 +43,8 @@ namespace fingerprint {
 namespace inscreen {
 namespace V1_0 {
 namespace implementation {
+
+int dc_dimming;
 
 /*
  * Write value to path and close file.
@@ -61,11 +66,13 @@ static T get(const std::string& path, const T& def) {
 
 FingerprintInscreen::FingerprintInscreen() {
     this->mFodCircleVisible = false;
+    this->mIsEnrolling = false;
     this->mVendorFpService = IVendorFingerprintExtensions::getService();
     this->mVendorDisplayService = IOneplusDisplay::getService();
 }
 
 Return<void> FingerprintInscreen::onStartEnroll() {
+    this->mIsEnrolling = true;
     this->mVendorFpService->updateStatus(OP_DISABLE_FP_LONGPRESS);
     this->mVendorFpService->updateStatus(OP_RESUME_FP_ENROLL);
 
@@ -73,13 +80,16 @@ Return<void> FingerprintInscreen::onStartEnroll() {
 }
 
 Return<void> FingerprintInscreen::onFinishEnroll() {
+    this->mIsEnrolling = false;
     this->mVendorFpService->updateStatus(OP_FINISH_FP_ENROLL);
 
     return Void();
 }
 
 Return<void> FingerprintInscreen::onPress() {
-    this->mVendorDisplayService->setMode(OP_DISPLAY_SET_DIM, 1);
+    if (mIsEnrolling) {
+        this->mVendorDisplayService->setMode(OP_DISPLAY_SET_DIM, 1);
+    }
     this->mVendorDisplayService->setMode(OP_DISPLAY_NOTIFY_PRESS, 1);
 
     return Void();
@@ -97,11 +107,16 @@ Return<void> FingerprintInscreen::onShowFODView() {
     this->mVendorDisplayService->setMode(OP_DISPLAY_AOD_MODE, 0);
     this->mVendorDisplayService->setMode(OP_DISPLAY_SET_DIM, 0);
     this->mVendorDisplayService->setMode(OP_DISPLAY_NOTIFY_PRESS, 0);
+    dc_dimming = get(DC_DIMMING_PATH, 0);
+    set(DC_DIMMING_PATH, 0);
 
     return Void();
 }
 
 Return<void> FingerprintInscreen::onHideFODView() {
+    if (mFodCircleVisible) {
+        set(DC_DIMMING_PATH, dc_dimming);
+    }
     this->mFodCircleVisible = false;
     this->mVendorDisplayService->setMode(OP_DISPLAY_AOD_MODE, 0);
     this->mVendorDisplayService->setMode(OP_DISPLAY_SET_DIM, 0);
@@ -114,6 +129,24 @@ Return<bool> FingerprintInscreen::handleAcquired(int32_t acquiredInfo, int32_t v
     std::lock_guard<std::mutex> _lock(mCallbackLock);
     if (mCallback == nullptr) {
         return false;
+    }
+
+    if (acquiredInfo == 6) {
+        if (vendorCode == 22) {
+            Return<void> ret = mCallback->onFingerDown();
+            if (!ret.isOk()) {
+                LOG(ERROR) << "FingerDown() error: " << ret.description();
+            }
+            return true;
+        }
+
+        if (vendorCode == 23) {
+            Return<void> ret = mCallback->onFingerUp();
+            if (!ret.isOk()) {
+                LOG(ERROR) << "FingerUp() error: " << ret.description();
+            }
+            return true;
+        }
     }
 
     if (acquiredInfo == FINGERPRINT_ACQUIRED_VENDOR) {
@@ -138,7 +171,18 @@ Return<bool> FingerprintInscreen::handleAcquired(int32_t acquiredInfo, int32_t v
 }
 
 Return<bool> FingerprintInscreen::handleError(int32_t error, int32_t vendorCode) {
-    return error == FINGERPRINT_ERROR_VENDOR && vendorCode == 6;
+    switch (error) {
+        case FINGERPRINT_ERROR_CANCELED:
+            if (vendorCode == 0) {
+                this->mIsEnrolling = false;
+            }
+            return false;
+        case FINGERPRINT_ERROR_VENDOR:
+            // Ignore vendorCode 6
+            return vendorCode == 6;
+        default:
+            return false;
+    }
 }
 
 Return<void> FingerprintInscreen::setLongPressEnabled(bool enabled) {

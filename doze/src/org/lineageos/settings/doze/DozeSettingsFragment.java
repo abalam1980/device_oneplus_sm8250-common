@@ -49,9 +49,6 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
     private SwitchPreference mAlwaysOnDisplayPreference;
 
     private SwitchPreference mPickUpPreference;
-
-    private SwitchPreference mPocketPreference;
-
     private SwitchPreference mRaiseToWakePreference;
 
     private Handler mHandler = new Handler();
@@ -77,16 +74,10 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
 
         PreferenceCategory pickupSensorCategory = (PreferenceCategory) getPreferenceScreen().
                 findPreference(Utils.CATEG_PICKUP_SENSOR);
-        PreferenceCategory proximitySensorCategory = (PreferenceCategory) getPreferenceScreen().
-                findPreference(Utils.CATEG_PROX_SENSOR);
 
         mPickUpPreference = (SwitchPreference) findPreference(Utils.GESTURE_PICK_UP_KEY);
         mPickUpPreference.setEnabled(dozeEnabled);
         mPickUpPreference.setOnPreferenceChangeListener(this);
-
-        mPocketPreference = (SwitchPreference) findPreference(Utils.GESTURE_POCKET_KEY);
-        mPocketPreference.setEnabled(dozeEnabled);
-        mPocketPreference.setOnPreferenceChangeListener(this);
 
         mRaiseToWakePreference = (SwitchPreference) findPreference(Utils.GESTURE_RAISE_TO_WAKE_KEY);
         mRaiseToWakePreference.setEnabled(dozeEnabled);
@@ -97,7 +88,7 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
             getPreferenceScreen().removePreference(mAlwaysOnDisplayPreference);
         } else {
             pickupSensorCategory.setDependency(Utils.ALWAYS_ON_DISPLAY);
-            proximitySensorCategory.setDependency(Utils.ALWAYS_ON_DISPLAY);
+
             mPickUpPreference.setDependency(Utils.GESTURE_RAISE_TO_WAKE_KEY);
         }
     }
@@ -159,8 +150,8 @@ public class DozeSettingsFragment extends PreferenceFragment implements OnPrefer
             mAlwaysOnDisplayPreference.setChecked(false);
         }
         mAlwaysOnDisplayPreference.setEnabled(isChecked);
+
         mPickUpPreference.setEnabled(isChecked);
-        mPocketPreference.setEnabled(isChecked);
         mRaiseToWakePreference.setEnabled(isChecked);
     }
 

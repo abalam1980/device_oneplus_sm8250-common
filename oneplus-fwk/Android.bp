@@ -3,8 +3,6 @@ java_library {
     installable: true,
 
     srcs: [
-        "src/android/util/OpFeatures.java",
-        "src/com/oneplus/os/IParamService.java",
-        "src/net/oneplus/odm/OpDeviceManagerInjector.java",
+        "src/**/*.java",
     ],
 }

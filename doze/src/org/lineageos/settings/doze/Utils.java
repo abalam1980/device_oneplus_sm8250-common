@@ -43,12 +43,8 @@ public final class Utils {
     protected static final String ALWAYS_ON_DISPLAY = "always_on_display";
 
     protected static final String CATEG_PICKUP_SENSOR = "pickup_sensor";
-    protected static final String CATEG_PROX_SENSOR = "proximity_sensor";
 
     protected static final String GESTURE_PICK_UP_KEY = "gesture_pick_up";
-
-    protected static final String GESTURE_POCKET_KEY = "gesture_pocket";
-
     protected static final String GESTURE_RAISE_TO_WAKE_KEY = "gesture_raise_to_wake";
 
     protected static void startService(Context context) {
@@ -109,11 +105,7 @@ public final class Utils {
     protected static boolean isPickUpEnabled(Context context) {
         return isGestureEnabled(context, GESTURE_PICK_UP_KEY);
     }
-    
-    protected static boolean isPocketEnabled(Context context) {
-        return isGestureEnabled(context, GESTURE_POCKET_KEY);
-    }
-    
+
     protected static void setPickUp(Preference preference, boolean value) {
         SwitchPreference pickup = (SwitchPreference)preference;
         pickup.setChecked(value);
@@ -125,7 +117,7 @@ public final class Utils {
     }
 
     public static boolean areGesturesEnabled(Context context) {
-        return isPickUpEnabled(context) || isPocketEnabled(context);
+        return isPickUpEnabled(context);
     }
 
     public static boolean sensorsEnabled(Context context) {
